@@ -1,4 +1,5 @@
-# Liveroo – Android group task app
+# ·˚𓆉 ༘₊· Liveroo ·˚𓆉 ༘₊· 
+An Android group task app
 
 Kotlin + Jetpack Compose + Room + Classic Bluetooth (RFCOMM). Groups share tasks phone to phone with no server.
 Built from the approved **Liveroo UI/UX Screen Specification** (C1–C23, P1–P19, T1–T16).
