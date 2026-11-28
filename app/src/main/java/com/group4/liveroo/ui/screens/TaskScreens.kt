@@ -1,6 +1,5 @@
 package com.group4.liveroo.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,36 +7,24 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.Contrast
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +35,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -60,56 +48,29 @@ import com.group4.liveroo.rules.DenyReason
 import com.group4.liveroo.ui.components.Avatar
 import com.group4.liveroo.ui.components.Banner
 import com.group4.liveroo.ui.components.BannerKind
-import com.group4.liveroo.ui.components.LiverooCard
+import com.group4.liveroo.ui.components.EmptyState
+import com.group4.liveroo.ui.components.GroupedCard
+import com.group4.liveroo.ui.components.LiverooDialog
 import com.group4.liveroo.ui.components.LiverooScaffold
-import com.group4.liveroo.ui.components.NotYetSynced
+import com.group4.liveroo.ui.components.LiverooSelectField
+import com.group4.liveroo.ui.components.LiverooTextField
+import com.group4.liveroo.ui.components.PendingChip
 import com.group4.liveroo.ui.components.PrimaryButton
+import com.group4.liveroo.ui.components.RowDivider
 import com.group4.liveroo.ui.components.SectionHeader
-import com.group4.liveroo.ui.components.StatusChip
+import com.group4.liveroo.ui.components.StatusIndicator
+import com.group4.liveroo.ui.components.StatusSelector
 import com.group4.liveroo.ui.components.Tab
-import com.group4.liveroo.ui.components.TaskRow
+import com.group4.liveroo.ui.components.TaskRowItem
+import com.group4.liveroo.ui.components.statusLabel
 import com.group4.liveroo.ui.components.userMessage
 import com.group4.liveroo.ui.nav.Routes
-import com.group4.liveroo.ui.theme.Border
-import com.group4.liveroo.ui.theme.ErrorTerracotta
-import com.group4.liveroo.ui.theme.ForestGreen
-import com.group4.liveroo.ui.theme.Ink
-import com.group4.liveroo.ui.theme.SecondaryText
-import com.group4.liveroo.ui.theme.SelectedTint
-import com.group4.liveroo.ui.theme.White
+import com.group4.liveroo.ui.theme.LiverooDimens
+import com.group4.liveroo.ui.theme.LiverooTheme
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
-/** Three-way status selector (C11). */
-@Composable
-fun StatusSelector(current: TaskStatus, onSelect: (TaskStatus) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(
-            Triple(TaskStatus.TODO, "To Do", Icons.Outlined.Circle),
-            Triple(TaskStatus.IN_PROGRESS, "In Progress", Icons.Outlined.Contrast),
-            Triple(TaskStatus.DONE, "Done", Icons.Filled.Check)
-        ).forEach { (s, label, icon) -> StatusOption(label, icon, s == current, Modifier.weight(1f)) { onSelect(s) } }
-    }
-}
-
-@Composable
-private fun StatusOption(label: String, icon: ImageVector, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick, modifier = modifier.height(56.dp), shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.5.dp, if (selected) ForestGreen else Border),
-        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
-            containerColor = if (selected) SelectedTint else White, contentColor = Ink
-        ),
-        contentPadding = PaddingValues(4.dp)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, Modifier.size(18.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall)
-        }
-    }
-}
 
 // ---------- S13 Task detail (three role variants) ----------
 @Composable
@@ -126,9 +87,10 @@ fun TaskDetailScreen(nav: NavController, taskId: String) {
     var menuOpen by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
+    val colors = LiverooTheme.colors
 
     if (t == null || t.deleted) {
-        LiverooScaffold("Task", nav) { Text("This task was deleted.", style = MaterialTheme.typography.bodyLarge) }
+        LiverooScaffold("Task", nav) { Text("This task was deleted.", style = LiverooTheme.type.bodyLarge, color = colors.textPrimary) }
         return
     }
     val isLeader = group?.leaderId == me
@@ -139,16 +101,20 @@ fun TaskDetailScreen(nav: NavController, taskId: String) {
     val updater = members.firstOrNull { it.userId == t.updatedBy }?.displayName ?: "someone"
 
     LiverooScaffold(
-        title = "Task", nav = nav, tab = Tab.GROUPS,
+        title = "", nav = nav, tab = Tab.GROUPS, snackbarHost = snackbar,
         actions = {
             if (isLeader && !readOnlyGroup) {
-                IconButton(onClick = { nav.navigate(Routes.taskForm(t.groupId, t.id)) }) { Icon(Icons.Filled.Edit, "Edit task") }
+                IconButton(onClick = { nav.navigate(Routes.taskForm(t.groupId, t.id)) }, Modifier.size(LiverooDimens.touchMin)) {
+                    Icon(Icons.Rounded.Edit, "Edit task", tint = colors.textPrimary)
+                }
                 Box {
-                    IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, "More options") }
-                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    IconButton(onClick = { menuOpen = true }, Modifier.size(LiverooDimens.touchMin)) {
+                        Icon(Icons.Rounded.MoreVert, "More options", tint = colors.textPrimary)
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }, containerColor = colors.surface) {
                         DropdownMenuItem(
-                            text = { Text("Delete task", color = ErrorTerracotta) },
-                            leadingIcon = { Icon(Icons.Filled.Delete, null, tint = ErrorTerracotta) },
+                            text = { Text("Delete task", style = LiverooTheme.type.body, color = colors.error) },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = colors.error) },
                             onClick = { menuOpen = false; confirmDelete = true }
                         )
                     }
@@ -157,61 +123,68 @@ fun TaskDetailScreen(nav: NavController, taskId: String) {
         }
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(group?.name.orEmpty(), style = MaterialTheme.typography.bodySmall, color = SecondaryText)
-            Text(t.title, style = MaterialTheme.typography.titleMedium.copy(fontSize = MaterialTheme.typography.headlineMedium.fontSize))
+            Text(group?.name.orEmpty(), style = LiverooTheme.type.caption, color = colors.textSecondary)
+            Text(t.title, style = LiverooTheme.type.titleMedium, color = colors.textPrimary, modifier = Modifier.semantics { heading() })
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("STATUS", style = MaterialTheme.typography.labelSmall, color = SecondaryText, modifier = Modifier.weight(1f))
-                if (t.dirty) NotYetSynced()
+                Text("Status", style = LiverooTheme.type.label, color = colors.textSecondary, modifier = Modifier.weight(1f))
+                if (t.dirty) PendingChip()
             }
             if (canChangeStatus) {
-                StatusSelector(t.status) { s ->
+                StatusSelector(t.status, onSelect = { s ->
                     scope.launch {
                         val denied = c.repository.setStatus(t.id, s).deniedReason()
                         snackbar.showSnackbar(denied?.userMessage() ?: "Status updated. Sync to share it.")
                     }
-                }
+                })
             } else {
-                StatusChip(t.status)
+                StatusIndicator(t.status)
                 Banner(
                     if (assignee != null) "Only ${assignee.displayName} or the leader can change this status."
-                    else "Only the leader can change this status."
+                    else "Only the leader can change this status.",
+                    icon = Icons.Rounded.Lock
                 )
             }
-            LiverooCard {
-                Text("ASSIGNEE", style = MaterialTheme.typography.labelSmall, color = SecondaryText)
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (assignee != null) {
-                        Avatar(assignee.displayName)
-                        Text(if (isMine) "${assignee.displayName} (you)" else assignee.displayName, style = MaterialTheme.typography.titleSmall)
-                    } else Text("Unassigned", style = MaterialTheme.typography.titleSmall)
+            GroupedCard {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Assignee", style = LiverooTheme.type.label, color = colors.textSecondary)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (assignee != null) {
+                            Avatar(assignee.displayName)
+                            Text(if (isMine) "${assignee.displayName} (you)" else assignee.displayName, style = LiverooTheme.type.itemTitle, color = colors.textPrimary)
+                        } else Text("Unassigned", style = LiverooTheme.type.itemTitle, color = colors.textPrimary)
+                    }
                 }
-                HorizontalDivider()
-                Text("DESCRIPTION", style = MaterialTheme.typography.labelSmall, color = SecondaryText)
-                Text(t.description.ifBlank { "No description." }, style = MaterialTheme.typography.bodyLarge)
+                RowDivider()
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Description", style = LiverooTheme.type.label, color = colors.textSecondary)
+                    Text(t.description.ifBlank { "No description." }, style = LiverooTheme.type.bodyLarge, color = colors.textPrimary)
+                }
             }
-            Text(
-                "Last updated by ${if (t.updatedBy == me) "you" else updater} · " +
-                    SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(t.updatedAt)),
-                style = MaterialTheme.typography.bodySmall, color = SecondaryText
-            )
-            SnackbarHost(snackbar)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Rounded.Schedule, null, Modifier.size(14.dp), tint = colors.textSecondary)
+                Text(
+                    "Last updated by ${if (t.updatedBy == me) "you" else updater} · " +
+                        SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(t.updatedAt)),
+                    style = LiverooTheme.type.caption, color = colors.textSecondary
+                )
+            }
         }
     }
 
-    if (confirmDelete) AlertDialog(
+    if (confirmDelete) LiverooDialog(
         onDismissRequest = { confirmDelete = false },
-        title = { Text("Delete this task?", style = MaterialTheme.typography.titleLarge) },
-        text = { Text("“${t.title}” will be removed for everyone after they sync.") },
-        confirmButton = {
-            TextButton(onClick = {
-                confirmDelete = false
-                scope.launch {
-                    val denied = c.repository.deleteTask(t.id).deniedReason()
-                    if (denied == null) nav.popBackStack() else snackbar.showSnackbar(denied.userMessage())
-                }
-            }) { Text("Delete", color = ErrorTerracotta) }
+        title = "Delete this task?",
+        body = "“${t.title}” will be removed for everyone after they sync.",
+        destructive = true,
+        confirmText = "Delete",
+        onConfirm = {
+            confirmDelete = false
+            scope.launch {
+                val denied = c.repository.deleteTask(t.id).deniedReason()
+                if (denied == null) nav.popBackStack() else snackbar.showSnackbar(denied.userMessage())
+            }
         },
-        dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel", color = Ink) } }
+        dismissText = "Cancel"
     )
 }
 
@@ -231,8 +204,8 @@ fun TaskFormScreen(nav: NavController, groupId: String, taskId: String?) {
     var assigneeId by rememberSaveable { mutableStateOf<String?>(null) }
     var status by rememberSaveable { mutableStateOf(TaskStatus.TODO) }
     var loaded by rememberSaveable { mutableStateOf(taskId == null) }
-    var pickerOpen by remember { mutableStateOf(false) }
     var showError by remember { mutableStateOf(false) }
+    val colors = LiverooTheme.colors
 
     // Load the existing task once when editing.
     if (taskId != null) {
@@ -252,7 +225,8 @@ fun TaskFormScreen(nav: NavController, groupId: String, taskId: String?) {
             assigneeCleared = true
         }
     }
-    val assigneeLabel = members.firstOrNull { it.userId == assigneeId }?.let { if (it.userId == me) "${it.displayName} (you)" else it.displayName } ?: "Unassigned"
+    val assigneeMember = members.firstOrNull { it.userId == assigneeId }
+    val assigneeLabel = assigneeMember?.let { if (it.userId == me) "${it.displayName} (you)" else it.displayName } ?: "Unassigned"
 
     LiverooScaffold(if (taskId == null) "New task" else "Edit task", nav) {
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -260,42 +234,30 @@ fun TaskFormScreen(nav: NavController, groupId: String, taskId: String?) {
                 Banner("The previous assignee is no longer an active member, so this task is now unassigned.", BannerKind.WARNING)
             }
             denied?.let { Banner(it.userMessage(), BannerKind.ERROR) }
-            OutlinedTextField(
-                value = title, onValueChange = { if (it.length <= 60) { title = it; showError = false } },
-                label = { Text("Title") }, singleLine = true, isError = showError,
-                supportingText = { Text(if (showError) "Add a title." else "Required  ${title.length}/60") },
-                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()
+            LiverooTextField(
+                value = title, onValueChange = { title = it; showError = false }, label = "Title",
+                maxLength = 60, helper = "Required", error = if (showError) "Add a title." else null
             )
-            OutlinedTextField(
-                value = description, onValueChange = { if (it.length <= 500) description = it },
-                label = { Text("Description") }, minLines = 4,
-                supportingText = { Text("Optional  ${description.length}/500") },
-                shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()
+            LiverooTextField(
+                value = description, onValueChange = { description = it }, label = "Description",
+                maxLength = 500, helper = "Optional", placeholder = "Optional details", multiline = true
             )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Assignee", style = MaterialTheme.typography.labelMedium)
-                Box {
-                    OutlinedButton(
-                        onClick = { pickerOpen = true }, modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(assigneeLabel, color = Ink, modifier = Modifier.weight(1f))
-                        Icon(Icons.Filled.ArrowDropDown, null, tint = Ink)
-                    }
-                    DropdownMenu(expanded = pickerOpen, onDismissRequest = { pickerOpen = false }) {
-                        DropdownMenuItem(text = { Text("Unassigned") }, onClick = { assigneeId = null; pickerOpen = false })
-                        members.forEach { m ->
-                            DropdownMenuItem(
-                                text = { Text(if (m.userId == me) "${m.displayName} (you)" else m.displayName) },
-                                onClick = { assigneeId = m.userId; pickerOpen = false }
-                            )
-                        }
-                    }
+            LiverooSelectField(value = assigneeLabel, label = "Assignee", leadingName = assigneeMember?.displayName) { close ->
+                DropdownMenuItem(
+                    text = { Text("Unassigned", style = LiverooTheme.type.bodyLarge, color = colors.textPrimary) },
+                    onClick = { assigneeId = null; close() }
+                )
+                members.forEach { m ->
+                    DropdownMenuItem(
+                        text = { Text(if (m.userId == me) "${m.displayName} (you)" else m.displayName, style = LiverooTheme.type.bodyLarge, color = colors.textPrimary) },
+                        leadingIcon = { Avatar(m.displayName, 28) },
+                        onClick = { assigneeId = m.userId; close() }
+                    )
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Status", style = MaterialTheme.typography.labelMedium)
-                StatusSelector(status) { status = it }
+                Text("Status", style = LiverooTheme.type.label, color = colors.textSecondary)
+                StatusSelector(status, onSelect = { status = it })
             }
         }
         PrimaryButton("Save", {
@@ -303,7 +265,7 @@ fun TaskFormScreen(nav: NavController, groupId: String, taskId: String?) {
                 val reason = c.repository.saveTask(groupId, taskId, title, description, assigneeId, status).deniedReason()
                 if (reason == null) nav.popBackStack() else denied = reason
             }
-        }, modifier = Modifier.padding(bottom = 16.dp))
+        }, modifier = Modifier.padding(bottom = LiverooDimens.space24))
     }
 }
 
@@ -316,21 +278,30 @@ fun MyTasksScreen(nav: NavController) {
     val tasks by tasksFlow.collectAsStateWithLifecycle(emptyList())
     val groups by c.repository.groups.collectAsStateWithLifecycle(emptyList())
     val names = groups.associate { it.id to it.name }
+    val colors = LiverooTheme.colors
 
     LiverooScaffold("My Tasks", nav, showBack = false, tab = Tab.MY_TASKS) {
-        Text("Assigned to you in all your groups", style = MaterialTheme.typography.bodyMedium, color = SecondaryText)
+        Text("Assigned to you in all your groups", style = LiverooTheme.type.caption, color = colors.textSecondary)
         if (tasks.isEmpty()) {
             Spacer(Modifier.weight(1f))
-            com.group4.liveroo.ui.components.EmptyState("Nothing assigned to you yet", "Tasks your leaders assign to you will show here.")
+            EmptyState("Nothing assigned to you yet", "Tasks your leaders assign to you will show here.", icon = Icons.Rounded.TaskAlt)
             Spacer(Modifier.weight(1f))
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 8.dp)) {
                 for (s in listOf(TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE)) {
                     val list = tasks.filter { it.status == s }
                     if (list.isEmpty()) continue
-                    item(key = "h-$s") { SectionHeader(com.group4.liveroo.ui.components.statusLabel(s), list.size) }
-                    items(list, key = { it.id }) { t ->
-                        TaskRow(t.title, "You", t.status, t.dirty, groupName = names[t.groupId]) { nav.navigate(Routes.task(t.id)) }
+                    item(key = "s-$s") {
+                        Column {
+                            SectionHeader(if (s == TaskStatus.IN_PROGRESS) "In progress" else statusLabel(s), list.size)
+                            Spacer(Modifier.size(8.dp))
+                            GroupedCard {
+                                list.forEachIndexed { i, t ->
+                                    if (i > 0) RowDivider()
+                                    TaskRowItem(t.title, "You", t.status, t.dirty, groupName = names[t.groupId]) { nav.navigate(Routes.task(t.id)) }
+                                }
+                            }
+                        }
                     }
                 }
             }
