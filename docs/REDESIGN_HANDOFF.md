@@ -38,7 +38,7 @@ Each stage is reviewed and built by the project owner before the next one starts
 
 ## Colour and theme tokens
 
-Tokens live in a `LiverooColors` data class with a light and a dark instance, provided through a `CompositionLocal` (`LocalLiverooColors`) and read as `LiverooTheme.colors.x`. The Material 3 `colorScheme` is filled from the same values so stock components (dialogs, menus, text fields, snackbars) match. The theme follows `isSystemInDarkTheme()`; there is no in-app switch.
+Tokens live in a `LiverooColors` data class with a light and a dark instance, provided through a `CompositionLocal` (`LocalLiverooColors`) and read as `LiverooTheme.colors.x`. The Material 3 `colorScheme` is filled from the same values so stock components (dialogs, menus, text fields, snackbars) match. The theme is an **in-app setting, default light**, switched with the "Dark mode" switch in Settings; the phone's own dark-mode setting is ignored. See `docs/REDESIGN_ADDENDUM_01.md` (Part A), which replaces the earlier "follows the system setting" rule.
 
 | Token | Light | Dark | Used for |
 | --- | --- | --- | --- |
@@ -70,7 +70,7 @@ Tokens live in a `LiverooColors` data class with a light and a dark instance, pr
 
 **Avatar colours (both themes, initials always #1F2A1C):** #F6C9A8, #F3B9B0, #F5D98C, #E3C6E8, #B9D9EE, #B8E0CF, #CFE3A6, #D4CCF2. Pick by a stable hash of the display name (`Math.floorMod(name.hashCode(), 8)`, implemented as `avatarColor(name)`), so a person keeps one colour.
 
-**Window theme:** `res/values/themes.xml` keeps cream; `res/values-night/themes.xml` sets the dark window background (#121813) so there is no cream flash on launch in dark mode.
+**Window theme:** `res/values/themes.xml` keeps cream; `res/values-night/themes.xml` is **removed** (addendum 01, A4), because the app no longer follows the phone's dark mode. Users with Dark mode on see a brief cream launch frame before the splash; this is accepted.
 
 **Legacy colour names** (`WarmCream`, `ForestGreen`, `Ink`, `White`, etc.) remain as `@Composable` getters mapped to the tokens so un-migrated code compiles. They are removed once stages 3 and 4 no longer reference them.
 
@@ -296,9 +296,9 @@ About 14 files change and 6–8 are added, all under `app/src/main/java/com/grou
 | 2 Theme | `licenses/Nunito-OFL.txt` | Added: licence, next to the existing Comfortaa and Luckiest Guy licences |
 | 2 Theme | `ui/theme/Color.kt` | Rewritten: light and dark token values, `LiverooColors` class, avatar palette, legacy aliases |
 | 2 Theme | `ui/theme/Type.kt` | Rewritten: Nunito family, type styles above, brand styles; Comfortaa no longer referenced |
-| 2 Theme | `ui/theme/Theme.kt` | Rewritten: light/dark `colorScheme`, `LocalLiverooColors`, shapes, `isSystemInDarkTheme()` |
+| 2 Theme | `ui/theme/Theme.kt` | Rewritten: light/dark `colorScheme`, `LocalLiverooColors`, shapes; dark mode now comes from `ThemePreference` (addendum 01) |
 | 2 Theme | `ui/theme/Dimens.kt` | Added: spacing, sizes and radii |
-| 2 Theme | `res/values-night/themes.xml` | Added: dark window background and status bar |
+| 2 Theme | `res/values-night/themes.xml` | Added in stage 2, then removed by the owner (addendum 01, A4) |
 | 3 Components | `ui/components/Components.kt` | Rewrite: scaffold, rows, cards, chips, tags, buttons, banners, empty and centered states, avatars, rings |
 | 3 Components | `ui/components/FloatingNav.kt` | Add: floating nav (replaces `LiverooBottomBar`; same navigation calls) |
 | 3 Components | `ui/components/Inputs.kt` | Add: text field, select field, status selector, filter chip row |

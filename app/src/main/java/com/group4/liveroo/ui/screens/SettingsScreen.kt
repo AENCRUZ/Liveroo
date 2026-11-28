@@ -1,20 +1,22 @@
 package com.group4.liveroo.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -31,12 +34,19 @@ import com.group4.liveroo.LocalContainer
 import com.group4.liveroo.bluetooth.BtPermissions
 import com.group4.liveroo.ui.components.Avatar
 import com.group4.liveroo.ui.components.Banner
+import com.group4.liveroo.ui.components.GroupedCard
+import com.group4.liveroo.ui.components.IconTile
+import com.group4.liveroo.ui.components.ListRow
 import com.group4.liveroo.ui.components.LiverooCard
+import com.group4.liveroo.ui.components.LiverooDialog
 import com.group4.liveroo.ui.components.LiverooScaffold
-import com.group4.liveroo.ui.theme.ErrorTerracotta
-import com.group4.liveroo.ui.theme.ForestGreen
-import com.group4.liveroo.ui.theme.Ink
-import com.group4.liveroo.ui.theme.SecondaryText
+import com.group4.liveroo.ui.components.LiverooTextField
+import com.group4.liveroo.ui.components.RowDivider
+import com.group4.liveroo.ui.components.TonalButton
+import com.group4.liveroo.ui.theme.LiverooDimens
+import com.group4.liveroo.ui.theme.LiverooTheme
+import com.group4.liveroo.ui.theme.ThemePreference
+import com.group4.liveroo.ui.theme.rememberDarkMode
 import kotlinx.coroutines.launch
 
 // ---------- S17 Settings ----------
@@ -48,59 +58,93 @@ fun SettingsScreen(nav: NavController) {
     val name by c.identity.displayName.collectAsStateWithLifecycle("")
     var editing by remember { mutableStateOf(false) }
     var draft by remember { mutableStateOf("") }
+    val colors = LiverooTheme.colors
 
     LiverooScaffold("Settings", nav) {
+        // Profile card
         LiverooCard {
-            Text("YOUR NAME", style = MaterialTheme.typography.labelSmall, color = SecondaryText)
+            Text("Your name", style = LiverooTheme.type.label, color = colors.textSecondary)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Avatar(name)
-                Text(name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                OutlinedButton(onClick = { draft = name; editing = true }, shape = RoundedCornerShape(12.dp)) {
-                    Icon(Icons.Filled.Edit, null); Text(" Edit", color = Ink)
-                }
+                Avatar(name, size = 64)
+                Text(name, style = LiverooTheme.type.itemTitle, color = colors.textPrimary, modifier = Modifier.weight(1f))
+                TonalButton("Edit", { draft = name; editing = true }, icon = Icons.Rounded.Edit)
             }
             // P10: TODO send the new name in the next sync (update this user's MemberEntity rows and mark them dirty).
-            Text("A new name reaches groupmates on your next sync.", style = MaterialTheme.typography.bodySmall, color = SecondaryText)
+            Text("A new name reaches groupmates on your next sync.", style = LiverooTheme.type.caption, color = colors.textSecondary)
         }
-        LiverooCard {
-            Text("BLUETOOTH", style = MaterialTheme.typography.labelSmall, color = SecondaryText)
+        // Addendum 01, A5: in-app dark mode switch. The whole row toggles.
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Appearance", style = LiverooTheme.type.label, color = colors.textSecondary)
+            GroupedCard {
+                val dark = rememberDarkMode()
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = LiverooDimens.rowMinWithLeading)
+                        .toggleable(value = dark, role = Role.Switch, onValueChange = { ThemePreference.setDark(context, it) })
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IconTile(Icons.Rounded.DarkMode, bg = colors.surfaceTile, tint = colors.textPrimary)
+                    Column(Modifier.weight(1f)) {
+                        Text("Dark mode", style = LiverooTheme.type.itemTitle, color = colors.textPrimary)
+                        Text("Use a dark theme in Liveroo", style = LiverooTheme.type.caption, color = colors.textSecondary)
+                    }
+                    Switch(
+                        checked = dark, onCheckedChange = null,
+                        colors = SwitchDefaults.colors(
+                            checkedTrackColor = colors.accent, checkedThumbColor = colors.onAccent, checkedBorderColor = colors.accent,
+                            uncheckedTrackColor = colors.surfaceTile, uncheckedThumbColor = colors.outlineControl, uncheckedBorderColor = colors.outlineControl
+                        )
+                    )
+                }
+            }
+        }
+        GroupedCard(header = "Bluetooth") {
             StatusLine("Bluetooth", if (c.bluetooth.isEnabled) "On" else "Off", c.bluetooth.isEnabled)
+            RowDivider()
             val granted = BtPermissions.granted(context)
             StatusLine("Nearby devices permission", if (granted) "Allowed" else "Not allowed", granted)
         }
         // P12: permanent data note
-        Banner("Liveroo saves everything on this phone only. There is no cloud backup. Sync often so your groupmates have a copy.")
-        LiverooCard {
-            Text("ABOUT", style = MaterialTheme.typography.labelSmall, color = SecondaryText)
-            Text("Liveroo 1.0", style = MaterialTheme.typography.bodyLarge)
-            Text("CS312 Group 4 · BatStateU Alangilan", style = MaterialTheme.typography.bodyMedium, color = SecondaryText)
+        Banner(
+            "Liveroo saves everything on this phone only. There is no cloud backup. Sync often so your groupmates have a copy.",
+            icon = Icons.Rounded.Storage
+        )
+        GroupedCard(header = "About") {
+            ListRow(title = "Liveroo 1.0", subtitle = "CS312 Group 4 · BatStateU Alangilan")
         }
     }
 
-    if (editing) AlertDialog(
+    if (editing) LiverooDialog(
         onDismissRequest = { editing = false },
-        title = { Text("Your name", style = MaterialTheme.typography.titleLarge) },
-        text = {
-            OutlinedTextField(
-                value = draft, onValueChange = { if (it.length <= 30) draft = it },
-                singleLine = true, label = { Text("Display name") }, modifier = Modifier.fillMaxWidth()
-            )
+        title = "Your name",
+        confirmText = "Save",
+        confirmEnabled = draft.isNotBlank(),
+        onConfirm = {
+            editing = false
+            scope.launch { c.identity.setName(draft) }
         },
-        confirmButton = {
-            TextButton(enabled = draft.isNotBlank(), onClick = {
-                editing = false
-                scope.launch { c.identity.setName(draft) }
-            }) { Text("Save") }
-        },
-        dismissButton = { TextButton(onClick = { editing = false }) { Text("Cancel", color = Ink) } }
-    )
+        dismissText = "Cancel",
+        onDismiss = { editing = false }
+    ) {
+        LiverooTextField(
+            value = draft, onValueChange = { draft = it }, label = "Display name", maxLength = 30
+        )
+    }
 }
 
 @Composable
 private fun StatusLine(label: String, value: String, ok: Boolean) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Icon(if (ok) Icons.Filled.Check else Icons.Filled.Close, null, tint = if (ok) ForestGreen else ErrorTerracotta)
-        Text(" $value", style = MaterialTheme.typography.labelMedium)
-    }
+    val colors = LiverooTheme.colors
+    ListRow(
+        title = label,
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    if (ok) Icons.Rounded.Check else Icons.Rounded.Close, null,
+                    tint = if (ok) colors.accent else colors.error
+                )
+                Text(value, style = LiverooTheme.type.chip, color = colors.textPrimary)
+            }
+        }
+    )
 }
